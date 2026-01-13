@@ -1,0 +1,42 @@
+# --- macOS System Files ---
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+# Icon must end with two \r
+Icon
+
+
+# --- PHP / Composer ---
+/vendor/
+composer.phar
+.phpunit.result.cache
+
+# --- Log Files ---
+*.log
+error_log
+access_log
+
+# --- Environment & Security ---
+# NEVER commit your actual .env file containing secrets!
+.env
+.env.local
+.env.*.local
+config.php
+# Exception: You might want to commit a template file
+!.env.example
+
+# --- IDEs & Editors (Optional but recommended) ---
+# VS Code
+.vscode/
+# PHPStorm / IntelliJ
+.idea/
+*.iml
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# --- Temporary Files ---
+*.tmp
+*.temp
+*.swp
