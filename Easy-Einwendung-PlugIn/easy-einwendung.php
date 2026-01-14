@@ -3,7 +3,7 @@
  * Plugin Name: Easy Einwendung 
  * Plugin URI: https://github.com/Pengsquare/Easy-Einwendung
  * Description: Einfache Einwendungen per Textbausteine pflegen und von Nutzenden als E-Mail/PDF Dokument zusammenstellen lassen.
- * Version: 0.4.6
+ * Version: 0.4.9
  * Author: Pengsquare UG (haftungsbeschränkt)
  * License: GNUGPLv3
  * License URI: https://www.gnu.org/licenses/gpl-3.0
@@ -16,8 +16,9 @@ if (!defined('ABSPATH')) exit;
  * ------------------------------------------------------------------------ */
 function som_enqueue_scripts() 
 {
-    wp_enqueue_script('som-jspdf', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', array(), '2.5.1', true);
+    wp_enqueue_script('som-jspdf', plugin_dir_url(__FILE__) . 'assets/js/jspdf.umd.min.js', array(), '2.5.1', true);
 }
+
 add_action('wp_enqueue_scripts', 'som_enqueue_scripts');
 
 /* ------------------------------------------------------------------------ *
