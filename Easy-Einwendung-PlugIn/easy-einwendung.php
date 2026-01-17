@@ -3,7 +3,7 @@
  * Plugin Name: Easy Einwendung 
  * Plugin URI: https://github.com/Pengsquare/Easy-Einwendung
  * Description: Einfache Einwendungen per Textbausteine pflegen und von Nutzenden als E-Mail/PDF Dokument zusammenstellen lassen.
- * Version: 0.4.9
+ * Version: 0.5.0
  * Author: Pengsquare UG (haftungsbeschränkt)
  * License: GNUGPLv3
  * License URI: https://www.gnu.org/licenses/gpl-3.0
@@ -107,6 +107,12 @@ function som_settings_init()
     register_setting('som_plugin_options', 'som_intro_text', array('sanitize_callback' => 'sanitize_textarea_field'));
     register_setting('som_plugin_options', 'som_footer_text', array('sanitize_callback' => 'sanitize_textarea_field'));
 
+    register_setting('som_plugin_options', 'som_dload_mail_disabled');
+    register_setting('som_plugin_options', 'som_dload_pdf_disabled');
+
+    register_setting('som_plugin_options', 'som_email_optional');
+    register_setting('som_plugin_options', 'som_enable_free_text');
+
     register_setting('som_plugin_options', 'som_btn_mail_bg', array('sanitize_callback' => 'sanitize_hex_color'));
     register_setting('som_plugin_options', 'som_btn_pdf_bg', array('sanitize_callback' => 'sanitize_hex_color'));
     register_setting('som_plugin_options', 'som_sel_ind_bg', array('sanitize_callback' => 'sanitize_hex_color'));
@@ -125,6 +131,10 @@ function som_handle_export()
         'settings' => 
         array(
             'som_targets'         => get_option('som_targets'),
+            'som_email_optional'  => get_option('som_email_optional'),
+            'som_enable_free_text' => get_option('som_enable_free_text'),
+            'som_dload_mail_disabled' => get_option('som_dload_mail_disabled'),
+            'som_dload_pdf_disabled' => get_option('som_dload_pdf_disabled'),
             'som_cc_email'        => get_option('som_cc_email'),
             'som_intro_text'      => get_option('som_intro_text'),
             'som_footer_text'     => get_option('som_footer_text'),
@@ -253,11 +263,44 @@ function som_options_page_html()
 
             <h3>Globale Einstellungen</h3>
             <table class="form-table">
+                <tr>
+                    <th scope="row">E-Mail Optional?</th>
+                    <td>
+                        <input type="checkbox" name="som_email_optional" value="1" <?php checked(get_option('som_email_optional'), '1'); ?>>
+                        <p class="description">Wenn aktiviert, muss der Nutzer keine E-Mail Adresse angeben.</p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">Individuelle Ergänzungen aktivieren?</th>
+                    <td>
+                        <input type="checkbox" name="som_enable_free_text" value="1" <?php checked(get_option('som_enable_free_text'), '1'); ?>>
+                        <p class="description">Wenn aktiviert, erscheint das Freitextfeld am Ende des Formulars.</p>
+                    </td>
+                </tr>
                 <tr><th scope="row">CC</th><td><input type="text" name="som_cc_email" value="<?php echo esc_attr(get_option('som_cc_email')); ?>" class="regular-text"><p class="description">Optional, wird in E-Mail als CC gesetzt.</p></td></tr>
                 <tr><th scope="row">Anschreiben</th><td><textarea name="som_intro_text" rows="4" cols="50" class="large-text"><?php echo esc_textarea(get_option('som_intro_text')); ?></textarea><p class="description">Beginn des Dokumentes/E-Mail.</p></td></tr>
                 <tr><th scope="row">Abschlusstext / Footer</th><td><textarea name="som_footer_text" rows="4" cols="50" class="large-text"><?php echo esc_textarea(get_option('som_footer_text')); ?></textarea><p class="description">Letzter Abschnitt im Dokument für Rahmentext und Grußformel.</p></td></tr>
             </table>
 
+            <hr>
+
+            <h3>Download-Optionen</h3>
+                <table class="form-table">
+                    <tr>
+                        <th scope="row">E-Mail Download-Option verstecken?</th>
+                        <td>
+                            <input type="checkbox" name="som_dload_mail_disabled" value="1" <?php checked(get_option('som_dload_mail_disabled'), '1'); ?>>
+                            <p class="description">Wenn aktiviert, ist der Download der E-Mail Vorlage nicht möglich.</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row">PDF Download-Option verstecken?</th>
+                        <td>
+                            <input type="checkbox" name="som_dload_pdf_disabled" value="1" <?php checked(get_option('som_dload_pdf_disabled'), '1'); ?>>
+                            <p class="description">Wenn aktiviert, ist der Download des PDFs nicht möglich.</p>
+                        </td>
+                    </tr>
+                </table>
             <hr>
 
             <h3>Design (Farben)</h3>
@@ -369,7 +412,8 @@ function som_block_builder_shortcode($atts)
     array(
         'cc'     => get_option('som_cc_email') ?: "", 
         'intro'  => get_option('som_intro_text') ?: "",
-        'footer' => get_option('som_footer_text') ?: ""
+        'footer' => get_option('som_footer_text') ?: "",
+        'email_opt' => get_option('som_email_optional'),
     );
 
     // Get Colors with defaults
@@ -402,6 +446,15 @@ function som_block_builder_shortcode($atts)
     ?>
     
     <style>
+        .som-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: inherit;
+            resize: vertical;
+        }
         .som-container { max-width: 600px; font-family: sans-serif; }
         .som-details-section { background: #f9f9f9; padding: 20px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 25px; }
         .som-details-title { margin-top:0; font-size: 1.1em; border-bottom: 1px solid #ccc; padding-bottom: 8px; margin-bottom: 15px; }
@@ -450,7 +503,12 @@ function som_block_builder_shortcode($atts)
                 <div class="som-form-row"><div class="som-field"><label>Vorname <span class="som-req">*</span></label><input type="text" id="som_fname"></div><div class="som-field"><label>Nachname <span class="som-req">*</span></label><input type="text" id="som_lname"></div></div>
                 <div class="som-form-row"><div class="som-field" style="flex:2;"><label>Straße/Hausnummer <span class="som-req">*</span></label><input type="text" id="som_street"></div></div>
                 <div class="som-form-row"><div class="som-field"><label>PLZ <span class="som-req">*</span></label><input type="text" id="som_zip"></div><div class="som-field" style="flex:2;"><label>Ort <span class="som-req">*</span></label><input type="text" id="som_city"></div></div>
-                <div class="som-form-row"><div class="som-field"><label>E-Mail <span class="som-req">*</span></label><input type="email" id="som_email"></div></div>
+                <div class="som-form-row">
+                    <div class="som-field">
+                        <label>E-Mail <?php if(get_option('som_email_optional') != '1') echo '<span class="som-req">*</span>'; ?></label>
+                        <input type="email" id="som_email">
+                    </div>
+                </div>
             </div>
 
             <?php 
@@ -496,9 +554,16 @@ function som_block_builder_shortcode($atts)
             if (!empty($orphan_blocks)) { $total_items = count($orphan_blocks); echo '<div class="som-group-wrapper"><div class="som-group-header"><span>Other</span><div class="som-group-info"><span class="som-counter" data-total="' . $total_items . '">0/' . $total_items . '</span><span>▼</span></div></div><div class="som-group-body" style="display:none;">'; foreach ($orphan_blocks as $block) { som_render_row($block); } echo '</div></div>'; }
             ?>
 
+            <?php if(get_option('som_enable_free_text') === '1'): ?>
+                <div style="margin-top: 25px; margin-bottom: 20px;">
+                    <label style="font-weight: bold; display:block; margin-bottom:5px;">Individuelle Ergänzungen (Optional)</label>
+                    <textarea id="som_free_text" class="som-textarea" rows="6" placeholder="Hier können Sie eigene Anmerkungen oder Begründungen hinzufügen."></textarea>
+                </div>
+            <?php endif; ?>
+
             <div class="som-actions">
-                <button type="button" id="som-draft-btn" class="som-btn som-btn-mail">Einwendung als E-Mail Entwurf</button>
-                <button type="button" id="som-pdf-btn" class="som-btn som-btn-pdf">Einwendung als PDF Dokument</button>
+                <button <?php if(get_option('som_dload_mail_disabled') == '1') echo 'style="display: none !important"'; ?> type="button" id="som-draft-btn" class="som-btn som-btn-mail">Einwendung als E-Mail Entwurf</button>
+                <button <?php if(get_option('som_dload_pdf_disabled') == '1') echo 'style="display: none !important"'; ?> type="button" id="som-pdf-btn" class="som-btn som-btn-pdf">Einwendung als PDF Dokument</button>
             </div>
             <div style="font-size: 12px; margin-top: 20px">
                 Hinweis: Daten werden nur im Browser verarbeitet, es werden keine Informationen zentral prozessiert oder gespeichert.
@@ -634,8 +699,20 @@ function som_block_builder_shortcode($atts)
 
             function getFormData() 
             {
-                var d = { fname: document.getElementById('som_fname').value.trim(), lname: document.getElementById('som_lname').value.trim(), street: document.getElementById('som_street').value.trim(), zip: document.getElementById('som_zip').value.trim(), city: document.getElementById('som_city').value.trim(), email: document.getElementById('som_email').value.trim(), checks: document.querySelectorAll('input[name="som_blocks[]"]:checked:not([disabled])') };
-                if(!d.fname || !d.lname || !d.street || !d.zip || !d.city || !d.email) { alert("Bitte füllen Sie alle mit * markierten Felder aus."); return null; }
+                var ftEl = document.getElementById('som_free_text');
+                var d = { fname: document.getElementById('som_fname').value.trim(), lname: document.getElementById('som_lname').value.trim(), street: document.getElementById('som_street').value.trim(), zip: document.getElementById('som_zip').value.trim(), city: document.getElementById('som_city').value.trim(), email: document.getElementById('som_email').value.trim(), checks: document.querySelectorAll('input[name="som_blocks[]"]:checked:not([disabled])'), freeText: ftEl ? ftEl.value.trim() : '' };
+
+                var isEmailReq = !(somGlobal.email_opt === '1');
+
+                if (isEmailReq)
+                {
+                    if(!d.fname || !d.lname || !d.street || !d.zip || !d.city || !d.email) { alert("Bitte füllen Sie alle mit * markierten Felder aus."); return null; }
+                }
+                else
+                {
+                    if(!d.fname || !d.lname || !d.street || !d.zip || !d.city) { alert("Bitte füllen Sie alle mit * markierten Felder aus."); return null; }
+                }
+
                 if(d.checks.length === 0 || d.checks.length < 2) { alert("Bitte wählen sie wenigstens 2 Begründungen aus."); return null; }
                 return d;
             }
@@ -662,6 +739,10 @@ function som_block_builder_shortcode($atts)
                 
                 var bodyParts = [];
                 d.checks.forEach(function(c) { bodyParts.push(stripHtml(somBlockData[c.value]).trim()); });
+                if (d.freeText)
+                {
+                    bodyParts.push(d.freeText);
+                }
                 var finalBody = address + subjectBody + intro + bodyParts.join("\r\n\r\n") + footer + signature + details;
                 var ccParam = somGlobal.cc ? (ampersand + "cc=" + somGlobal.cc) : "";
                 
@@ -724,6 +805,17 @@ function som_block_builder_shortcode($atts)
                     doc.text(lines, margin, cursorY); cursorY += (lines.length * 6); 
                 });
 
+                if (d.freeText) 
+                {
+                     if (cursorY > 265) { doc.addPage(); cursorY = 20; }
+                     
+                     var ftLines = doc.splitTextToSize(d.freeText, maxLineWidth);                     
+                     if (cursorY + (ftLines.length * 6) > 280) { doc.addPage(); cursorY = 20; }
+                     
+                     doc.text(ftLines, margin, cursorY); 
+                     cursorY += (ftLines.length * 6);
+                     cursorY += 5;
+                }
 
                 if (cursorY > 260) { doc.addPage(); cursorY = 20; }
                 if(somGlobal.footer) 
@@ -734,7 +826,14 @@ function som_block_builder_shortcode($atts)
                 doc.setFont("helvetica", "normal"); doc.setFontSize(12); doc.setTextColor(0);
                 doc.text(d.fname + " " + d.lname, margin, cursorY);
 
-                doc.save("Einwendung_" + d.lname + ".pdf");
+                var pageCount = doc.getNumberOfPages();
+                doc.setFontSize(8); 
+                for(var i = 0; i < pageCount; i++) {
+                    doc.setPage(i);
+                    doc.text("Seite " + String(pageCount-i) + " von " + String(pageCount), pageWidth / 2, 280, { align: "center" });
+                }
+
+                doc.save("Einwendung_" + currentTarget.label + "_" + d.fname + "_" + d.lname + ".pdf");
             });
         </script>
     </div>
