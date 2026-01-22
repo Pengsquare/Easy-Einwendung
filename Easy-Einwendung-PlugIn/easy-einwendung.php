@@ -3,7 +3,7 @@
  * Plugin Name: Easy Einwendung 
  * Plugin URI: https://github.com/Pengsquare/Easy-Einwendung
  * Description: Einfache Einwendungen per Textbausteine pflegen und von Nutzenden als E-Mail/PDF Dokument zusammenstellen lassen.
- * Version: 0.5.0
+ * Version: 0.5.1
  * Author: Pengsquare UG (haftungsbeschränkt)
  * License: GNUGPLv3
  * License URI: https://www.gnu.org/licenses/gpl-3.0
@@ -828,9 +828,10 @@ function som_block_builder_shortcode($atts)
 
                 var pageCount = doc.getNumberOfPages();
                 doc.setFontSize(8); 
-                for(var i = 0; i < pageCount; i++) {
+                for(var i = 1; i <= pageCount; i++) 
+                {
                     doc.setPage(i);
-                    doc.text("Seite " + String(pageCount-i) + " von " + String(pageCount), pageWidth / 2, 280, { align: "center" });
+                    doc.text("Seite " + String(i) + " von " + String(pageCount), pageWidth / 2, 280, { align: "center" });
                 }
 
                 doc.save("Einwendung_" + currentTarget.label + "_" + d.fname + "_" + d.lname + ".pdf");
