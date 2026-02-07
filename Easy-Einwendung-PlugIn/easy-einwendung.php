@@ -3,7 +3,7 @@
  * Plugin Name: Easy Einwendung 
  * Plugin URI: https://github.com/Pengsquare/Easy-Einwendung
  * Description: Einfache Einwendungen per Textbausteine pflegen und von Nutzenden als E-Mail/PDF Dokument zusammenstellen lassen.
- * Version: 0.5.1
+ * Version: 0.5.2
  * Author: Pengsquare UG (haftungsbeschränkt)
  * License: GNUGPLv3
  * License URI: https://www.gnu.org/licenses/gpl-3.0
@@ -344,32 +344,47 @@ function som_options_page_html()
             var tableBody = document.getElementById('som_targets_body');
             var addButton = document.getElementById('som_add_target');
 
-            addButton.addEventListener('click', function() 
-            {
-                var rowCount = tableBody.querySelectorAll('tr').length;
+            function renumber() {
+                var rows = tableBody.querySelectorAll('tr.som-target-row');
+                rows.forEach(function(row, i) {
+                    // first <td> is the ID column
+                    var idCell = row.querySelector('td');
+                    if (idCell) idCell.textContent = i;
+
+                    row.querySelectorAll('input[name], textarea[name]').forEach(function(el) {
+                        el.name = el.name.replace(/som_targets\[\d+\]/, 'som_targets[' + i + ']');
+                    });
+                });
+            }
+
+            addButton.addEventListener('click', function() {
                 var newRow = document.createElement('tr');
                 newRow.className = 'som-target-row';
                 newRow.innerHTML = `
-                    <td>${rowCount}</td>
-                    <td><input type="text" name="som_targets[${rowCount}][label]" class="regular-text" style="width:100%"></td>
-                    <td><input type="text" name="som_targets[${rowCount}][email]" class="regular-text" style="width:100%"></td>
-                    <td><input type="text" name="som_targets[${rowCount}][subject]" class="regular-text" style="width:100%"></td>
-                    <td><textarea name="som_targets[${rowCount}][address]" rows="3" class="large-text" style="width:100%"></textarea></td>
+                    <td></td>
+                    <td><input type="text" name="som_targets[0][label]" class="regular-text" style="width:100%"></td>
+                    <td><input type="text" name="som_targets[0][email]" class="regular-text" style="width:100%"></td>
+                    <td><input type="text" name="som_targets[0][subject]" class="regular-text" style="width:100%"></td>
+                    <td><textarea name="som_targets[0][address]" rows="3" class="large-text" style="width:100%"></textarea></td>
                     <td><button type="button" class="button som-remove-row">Entfernen</button></td>
                 `;
                 tableBody.appendChild(newRow);
+                renumber();
             });
 
-            tableBody.addEventListener('click', function(e) 
-            {
-                if(e.target && e.target.classList.contains('som-remove-row')) {
-                    if(tableBody.querySelectorAll('tr').length > 1) {
+            tableBody.addEventListener('click', function(e) {
+                if (e.target && e.target.classList.contains('som-remove-row')) {
+                    var rows = tableBody.querySelectorAll('tr.som-target-row');
+                    if (rows.length > 1) {
                         e.target.closest('tr').remove();
+                        renumber();
                     } else {
                         alert("Mindestens eine Zeile muss bestehen bleiben.");
                     }
                 }
             });
+
+            renumber();
         });
         </script>
 
